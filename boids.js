@@ -6,6 +6,9 @@ const numBoids = 100;
 const visualRange = 75;
 
 var boids = [];
+let mouseX;
+let mouseY;
+
 
 function initBoids() {
   for (var i = 0; i < numBoids; i += 1) {
@@ -111,6 +114,21 @@ function avoidOthers(boid) {
   boid.dy += moveY * avoidFactor;
 }
 
+function avoidPredator(boid,mouseX,mouseY)
+{
+  const predDistance = 100; //min distance to the predator
+  const avoidFactor = 0.15; //escape velocity from predator
+  let moveX = 0;
+  let moveY = 0;
+  let actualDis = Math.sqrt((boid.x - mouseX) * (boid.x - mouseX) + (boid.y - mouseY) * (boid.y - mouseY));
+  if(actualDis < predDistance){
+    moveX += boid.x - mouseX;
+    moveY += boid.y - mouseY;
+  }
+  boid.dx += moveX * avoidFactor;
+  boid.dy += moveY * avoidFactor;
+}
+
 // Find the average velocity (speed and direction) of the other boids and
 // adjust velocity slightly to match.
 function matchVelocity(boid) {
@@ -151,6 +169,19 @@ function limitSpeed(boid) {
 
 const DRAW_TRAIL = false;
 
+function drawPredator(ctx,mouseX,mouseY)
+{
+  ctx.beginPath();
+  ctx.fillStyle = "#b10a1e";
+  ctx.moveTo(mouseX + 7.5, mouseY);
+  ctx.lineTo(mouseX - 7.5, mouseY - 5);
+  ctx.lineTo(mouseX - 22.5 , mouseY);
+  ctx.lineTo(mouseX - 7.5, mouseY + 5);
+  ctx.lineTo(mouseX + 7.5, mouseY);
+  ctx.fill();
+
+}
+
 function drawBoid(ctx, boid) {
   const angle = Math.atan2(boid.dy, boid.dx);
   ctx.translate(boid.x, boid.y);
@@ -176,6 +207,13 @@ function drawBoid(ctx, boid) {
   }
 }
 
+//location of the predator
+addEventListener("mousemove",function(evnt)
+{
+  mouseX = evnt.clientX;
+  mouseY = evnt.clientY;
+})
+
 // Main animation loop
 function animationLoop() {
   // Update each boid
@@ -183,6 +221,7 @@ function animationLoop() {
     // Update the velocities according to each rule
     flyTowardsCenter(boid);
     avoidOthers(boid);
+    avoidPredator(boid,mouseX,mouseY);
     matchVelocity(boid);
     limitSpeed(boid);
     keepWithinBounds(boid);
@@ -193,13 +232,15 @@ function animationLoop() {
     boid.history.push([boid.x, boid.y])
     boid.history = boid.history.slice(-50);
   }
-
+  
   // Clear the canvas and redraw all the boids in their current positions
   const ctx = document.getElementById("boids").getContext("2d");
   ctx.clearRect(0, 0, width, height);
   for (let boid of boids) {
     drawBoid(ctx, boid);
   }
+  
+  drawPredator(ctx,mouseX,mouseY); //mouseX mouseY position of the predator
 
   // Schedule the next frame
   window.requestAnimationFrame(animationLoop);
@@ -208,10 +249,10 @@ function animationLoop() {
 window.onload = () => {
   // Make sure the canvas always fills the whole window
   window.addEventListener("resize", sizeCanvas, false);
-  sizeCanvas();
+ sizeCanvas();
 
   // Randomly distribute the boids to start
-  initBoids();
+ initBoids();
 
   // Schedule the main animation loop
   window.requestAnimationFrame(animationLoop);
