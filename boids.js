@@ -17,6 +17,7 @@ function initBoids() {
       y: Math.random() * height,
       dx: Math.random() * 10 - 5,
       dy: Math.random() * 10 - 5,
+      perched: false,
       history: [],
     };
   }
@@ -52,21 +53,47 @@ function sizeCanvas() {
 // Constrain a boid to within the window. If it gets too close to an edge,
 // nudge it back in and reverse its direction.
 function keepWithinBounds(boid) {
-  const margin = 200;
+  const margin = 100;
   const turnFactor = 1;
 
   if (boid.x < margin) {
-    boid.dx += turnFactor;
+    if(!boid.perched)
+      boid.dx += turnFactor;
   }
   if (boid.x > width - margin) {
-    boid.dx -= turnFactor
+    if(!boid.perched)
+      boid.dx -= turnFactor
   }
   if (boid.y < margin) {
-    boid.dy += turnFactor;
+    if(!boid.perched)
+      boid.dy += turnFactor;
   }
   if (boid.y > height - margin) {
-    boid.dy -= turnFactor;
+    if(!boid.perched)
+      boid.dy -= turnFactor;
   }
+
+}
+
+//perching
+function perching(boid){
+
+    //perch object size 300px width 5px height
+    if (boid.x > 100 && boid.x < 400 && boid.y > height - 30 && boid.y < height - 25) //collides with the perch object
+    {
+      //rotate boid by 90 degree and stop motion 
+      // ctx.rotate(-Math.PI/2);
+      boid.perched = true;
+      // alert("stop longer");
+      boid.dx = 0;
+      boid.dy = 0;
+     //if predator gets too close disperse them  
+     // auto disperse after sitting for sometime
+    }
+
+
+  // }
+
 }
 
 // Find the center of mass of the other boids and adjust velocity slightly to
@@ -79,20 +106,26 @@ function flyTowardsCenter(boid) {
   let numNeighbors = 0;
 
   for (let otherBoid of boids) {
-    if (distance(boid, otherBoid) < visualRange) {
-      centerX += otherBoid.x;
-      centerY += otherBoid.y;
-      numNeighbors += 1;
+    // if(!otherBoid.perched)
+    if(!boid.perched)
+    {
+      if (distance(boid, otherBoid) < visualRange) {
+        centerX += otherBoid.x;
+        centerY += otherBoid.y;
+        numNeighbors += 1;
+      }
     }
   }
-
+    if(!boid.perched){
   if (numNeighbors) {
     centerX = centerX / numNeighbors;
     centerY = centerY / numNeighbors;
 
     boid.dx += (centerX - boid.x) * centeringFactor;
     boid.dy += (centerY - boid.y) * centeringFactor;
+    
   }
+}
 }
 
 // Move away from other boids that are too close to avoid colliding
@@ -102,18 +135,24 @@ function avoidOthers(boid) {
   let moveX = 0;
   let moveY = 0;
   for (let otherBoid of boids) {
+ 
     if (otherBoid !== boid) {
       if (distance(boid, otherBoid) < minDistance) {
+
         moveX += boid.x - otherBoid.x;
         moveY += boid.y - otherBoid.y;
       }
     }
   }
-
-  boid.dx += moveX * avoidFactor;
-  boid.dy += moveY * avoidFactor;
+  
+  if(!boid.perched)
+  {
+    boid.dx += moveX * avoidFactor;
+    boid.dy += moveY * avoidFactor;
+  }
 }
 
+//move away from predator 
 function avoidPredator(boid,mouseX,mouseY)
 {
   const predDistance = 100; //min distance to the predator
@@ -122,6 +161,13 @@ function avoidPredator(boid,mouseX,mouseY)
   let moveY = 0;
   let actualDis = Math.sqrt((boid.x - mouseX) * (boid.x - mouseX) + (boid.y - mouseY) * (boid.y - mouseY));
   if(actualDis < predDistance){
+
+    if(boid.perched){
+      //if it is perched on the perch-object then move it to the edge of the perched object so it can escape 
+      boid.y -= 5; // height of the perch object 
+      boid.perched = false;
+    }
+
     moveX += boid.x - mouseX;
     moveY += boid.y - mouseY;
   }
@@ -139,20 +185,27 @@ function matchVelocity(boid) {
   let numNeighbors = 0;
 
   for (let otherBoid of boids) {
-    if (distance(boid, otherBoid) < visualRange) {
-      avgDX += otherBoid.dx;
-      avgDY += otherBoid.dy;
-      numNeighbors += 1;
+    // if(!otherBoid.perched)
+    if(!boid.perched)
+    {
+      if (distance(boid, otherBoid) < visualRange) {
+        avgDX += otherBoid.dx;
+        avgDY += otherBoid.dy;
+        numNeighbors += 1;
+      }
     }
   }
 
-  if (numNeighbors) {
-    avgDX = avgDX / numNeighbors;
-    avgDY = avgDY / numNeighbors;
+  if(!boid.perched)
+  {
+    if (numNeighbors) {
+      avgDX = avgDX / numNeighbors;
+      avgDY = avgDY / numNeighbors;
 
-    boid.dx += (avgDX - boid.dx) * matchingFactor;
-    boid.dy += (avgDY - boid.dy) * matchingFactor;
-  }
+      boid.dx += (avgDX - boid.dx) * matchingFactor;
+      boid.dy += (avgDY - boid.dy) * matchingFactor;
+    }
+}
 }
 
 // Speed will naturally vary in flocking behavior, but real animals can't go
@@ -178,6 +231,21 @@ function drawPredator(ctx,mouseX,mouseY)
   ctx.lineTo(mouseX - 22.5 , mouseY);
   ctx.lineTo(mouseX - 7.5, mouseY + 5);
   ctx.lineTo(mouseX + 7.5, mouseY);
+  ctx.fill();
+
+}
+
+
+function drawPerch(ctx)
+{
+  ctx.beginPath();
+  const canvas = document.getElementById("boids");
+  // width = window.innerWidth;
+  height = window.innerHeight;
+  // ctx.moveTo(100,height - 30);
+  // ctx.lineTo(400,height - 30);
+  ctx.rect(100,height-30,300,5);
+  ctx.fillStyle = "green";
   ctx.fill();
 
 }
@@ -218,10 +286,12 @@ addEventListener("mousemove",function(evnt)
 function animationLoop() {
   // Update each boid
   for (let boid of boids) {
+
     // Update the velocities according to each rule
     flyTowardsCenter(boid);
     avoidOthers(boid);
     avoidPredator(boid,mouseX,mouseY);
+    perching(boid);
     matchVelocity(boid);
     limitSpeed(boid);
     keepWithinBounds(boid);
@@ -239,7 +309,8 @@ function animationLoop() {
   for (let boid of boids) {
     drawBoid(ctx, boid);
   }
-  
+
+  drawPerch(ctx);
   drawPredator(ctx,mouseX,mouseY); //mouseX mouseY position of the predator
 
   // Schedule the next frame
