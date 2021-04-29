@@ -18,7 +18,7 @@ function initBoids() {
       dx: Math.random() * 10 - 5,
       dy: Math.random() * 10 - 5,
       history: [],
-      zomb : false
+      infection : false
     };
   }
 }
@@ -131,7 +131,7 @@ function avoidPredator(boid,predator)
   //check infection
   const infectionDist = 20;
   if(actualDis < infectionDist){  
-    boid.zomb = true;
+    boid.infection = true;
   }
 
   //update
@@ -202,7 +202,7 @@ function drawBoid(ctx, boid) {
   ctx.translate(boid.x, boid.y);
   ctx.rotate(angle);
   ctx.translate(-boid.x, -boid.y);
-  if(boid.zomb === true)
+  if(boid.infection === true)
     ctx.fillStyle = "#b10a1e";
   else
     ctx.fillStyle = "#558cf4";
