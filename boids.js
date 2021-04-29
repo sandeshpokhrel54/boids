@@ -18,9 +18,14 @@ function initBoids() {
       dx: Math.random() * 10 - 5,
       dy: Math.random() * 10 - 5,
       history: [],
+      zomb : false
     };
   }
 }
+
+predator = { x:Math.random()*width,
+             y:Math.random()*height};
+
 
 function distance(boid1, boid2) {
   return Math.sqrt(
@@ -97,7 +102,7 @@ function flyTowardsCenter(boid) {
 
 // Move away from other boids that are too close to avoid colliding
 function avoidOthers(boid) {
-  const minDistance = 20; // The distance to stay away from other boids
+  const minDistance = 30; // The distance to stay away from other boids
   const avoidFactor = 0.05; // Adjust velocity by this %
   let moveX = 0;
   let moveY = 0;
@@ -114,20 +119,30 @@ function avoidOthers(boid) {
   boid.dy += moveY * avoidFactor;
 }
 
-function avoidPredator(boid,mouseX,mouseY)
+
+function avoidPredator(boid,predator)
 {
   const predDistance = 100; //min distance to the predator
   const avoidFactor = 0.15; //escape velocity from predator
   let moveX = 0;
   let moveY = 0;
-  let actualDis = Math.sqrt((boid.x - mouseX) * (boid.x - mouseX) + (boid.y - mouseY) * (boid.y - mouseY));
+  let actualDis = distance(boid,predator);
+  
+  //check infection
+  const infectionDist = 20;
+  if(actualDis < infectionDist){  
+    boid.zomb = true;
+  }
+
+  //update
   if(actualDis < predDistance){
-    moveX += boid.x - mouseX;
-    moveY += boid.y - mouseY;
+    moveX += boid.x - predator.x;
+    moveY += boid.y - predator.y;
   }
   boid.dx += moveX * avoidFactor;
   boid.dy += moveY * avoidFactor;
 }
+
 
 // Find the average velocity (speed and direction) of the other boids and
 // adjust velocity slightly to match.
@@ -169,15 +184,15 @@ function limitSpeed(boid) {
 
 const DRAW_TRAIL = false;
 
-function drawPredator(ctx,mouseX,mouseY)
+function drawPredator(ctx,predator)
 {
   ctx.beginPath();
   ctx.fillStyle = "#b10a1e";
-  ctx.moveTo(mouseX + 7.5, mouseY);
-  ctx.lineTo(mouseX - 7.5, mouseY - 5);
-  ctx.lineTo(mouseX - 22.5 , mouseY);
-  ctx.lineTo(mouseX - 7.5, mouseY + 5);
-  ctx.lineTo(mouseX + 7.5, mouseY);
+  ctx.moveTo(predator.x + 7.5, predator.y);
+  ctx.lineTo(predator.x - 7.5, predator.y - 5);
+  ctx.lineTo(predator.x - 22.5 , predator.y);
+  ctx.lineTo(predator.x - 7.5, predator.y + 5);
+  ctx.lineTo(predator.x + 7.5, predator.y);
   ctx.fill();
 
 }
@@ -187,7 +202,11 @@ function drawBoid(ctx, boid) {
   ctx.translate(boid.x, boid.y);
   ctx.rotate(angle);
   ctx.translate(-boid.x, -boid.y);
-  ctx.fillStyle = "#558cf4";
+  if(boid.zomb === true)
+    ctx.fillStyle = "#b10a1e";
+  else
+    ctx.fillStyle = "#558cf4";
+
   ctx.beginPath();
   ctx.moveTo(boid.x, boid.y);
   ctx.lineTo(boid.x - 15, boid.y + 5);
@@ -212,6 +231,8 @@ addEventListener("mousemove",function(evnt)
 {
   mouseX = evnt.clientX;
   mouseY = evnt.clientY;
+  predator.x = mouseX;
+  predator.y = mouseY;
 })
 
 // Main animation loop
@@ -221,7 +242,7 @@ function animationLoop() {
     // Update the velocities according to each rule
     flyTowardsCenter(boid);
     avoidOthers(boid);
-    avoidPredator(boid,mouseX,mouseY);
+    avoidPredator(boid,predator);
     matchVelocity(boid);
     limitSpeed(boid);
     keepWithinBounds(boid);
@@ -237,10 +258,11 @@ function animationLoop() {
   const ctx = document.getElementById("boids").getContext("2d");
   ctx.clearRect(0, 0, width, height);
   for (let boid of boids) {
+
     drawBoid(ctx, boid);
   }
   
-  drawPredator(ctx,mouseX,mouseY); //mouseX mouseY position of the predator
+  drawPredator(ctx,predator); //mouseX mouseY position of the predator
 
   // Schedule the next frame
   window.requestAnimationFrame(animationLoop);
