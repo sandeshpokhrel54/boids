@@ -103,18 +103,36 @@ function flyTowardsCenter(boid) {
 // Move away from other boids that are too close to avoid colliding
 function avoidOthers(boid) {
   const minDistance = 30; // The distance to stay away from other boids
+  const minInfDistance = 20; //The distance to stay away from infected boids
+  const infAvoidFactor = 2;
   const avoidFactor = 0.05; // Adjust velocity by this %
   let moveX = 0;
   let moveY = 0;
   for (let otherBoid of boids) {
     if (otherBoid !== boid) {
-      if (distance(boid, otherBoid) < minDistance) {
-        moveX += boid.x - otherBoid.x;
-        moveY += boid.y - otherBoid.y;
-      }
+
+        if(distance(boid, otherBoid) < minDistance) {
+            moveX += boid.x - otherBoid.x;
+            moveY += boid.y - otherBoid.y;
+          }                     
     }
+    
+//avoid infected boid by larger distance
+    if(otherBoid.infection){
+          moveX *= infAvoidFactor;
+          moveY *= infAvoidFactor;
+    }
+//infecting other by infected boids
+    if(distance(boid,otherBoid) < minInfDistance){
+      
+      if(boid.infection === true)
+        otherBoid.infection = true;
+
+    }
+
   }
 
+  
   boid.dx += moveX * avoidFactor;
   boid.dy += moveY * avoidFactor;
 }
@@ -126,21 +144,26 @@ function avoidPredator(boid,predator)
   const avoidFactor = 0.15; //escape velocity from predator
   let moveX = 0;
   let moveY = 0;
-  let actualDis = distance(boid,predator);
-  
-  //check infection
-  const infectionDist = 20;
-  if(actualDis < infectionDist){  
-    boid.infection = true;
-  }
 
-  //update
-  if(actualDis < predDistance){
-    moveX += boid.x - predator.x;
-    moveY += boid.y - predator.y;
+  if(!boid.infection)  //if infected do not avoid predator
+  {
+
+    let actualDis = distance(boid,predator);
+  
+    //check infection
+    const infectionDist = 20;
+    if(actualDis < infectionDist){  
+      boid.infection = true;
+    }
+
+    //update
+    if(actualDis < predDistance){
+      moveX += boid.x - predator.x;
+      moveY += boid.y - predator.y;
+    }
+    boid.dx += moveX * avoidFactor;
+    boid.dy += moveY * avoidFactor;
   }
-  boid.dx += moveX * avoidFactor;
-  boid.dy += moveY * avoidFactor;
 }
 
 
@@ -173,7 +196,7 @@ function matchVelocity(boid) {
 // Speed will naturally vary in flocking behavior, but real animals can't go
 // arbitrarily fast.
 function limitSpeed(boid) {
-  const speedLimit = 15;
+  const speedLimit = 8;
 
   const speed = Math.sqrt(boid.dx * boid.dx + boid.dy * boid.dy);
   if (speed > speedLimit) {
